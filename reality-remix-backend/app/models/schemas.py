@@ -33,10 +33,12 @@ class WebSocketMessageType(str, Enum):
     FRAME = "frame"
     GENRE_CHANGE = "genre_change"
     AUDIO_CHUNK = "audio_chunk"
+    MUSIC_CHUNK = "music_chunk"
     TURN_COMPLETE = "turn_complete"
     ERROR = "error"
     SESSION_STOP = "session_stop"
     TRANSCRIPTION = "transcription"
+    MUSIC_TOGGLE = "music_toggle"
 
 
 class SessionStartMessage(BaseModel):
@@ -44,6 +46,7 @@ class SessionStartMessage(BaseModel):
     type: Literal[WebSocketMessageType.SESSION_START] = WebSocketMessageType.SESSION_START
     genre: Genre
     fps: float = Field(default=1.0, ge=0.5, le=2.0, description="Frames per second")
+    enable_music: bool = Field(default=True, description="Enable background music generation")
 
 
 class FrameMessage(BaseModel):
@@ -159,3 +162,33 @@ class GeminiServerContentMessage(BaseModel):
 class GeminiToolCall(BaseModel):
     """Tool call from Gemini (not used in this app)."""
     tool_call: Optional[dict] = None
+
+
+# Music Generation Schemas
+class MusicChunkMessage(BaseModel):
+    """Server message containing background music chunk."""
+    type: Literal[WebSocketMessageType.MUSIC_CHUNK] = WebSocketMessageType.MUSIC_CHUNK
+    data: str = Field(..., description="Base64-encoded music audio data")
+    timestamp: int = Field(..., description="Server timestamp in milliseconds")
+
+
+class MusicToggleMessage(BaseModel):
+    """Client message to toggle background music on/off."""
+    type: Literal[WebSocketMessageType.MUSIC_TOGGLE] = WebSocketMessageType.MUSIC_TOGGLE
+    enabled: bool = Field(..., description="Enable or disable background music")
+
+
+class MusicGenerationConfig(BaseModel):
+    """Configuration for Lyria music generation."""
+    bpm: Optional[int] = Field(default=120, ge=60, le=200, description="Beats per minute")
+    guidance: Optional[float] = Field(default=4.0, ge=0.0, le=6.0, description="Prompt adherence strength")
+    density: Optional[float] = Field(default=0.5, ge=0.0, le=1.0, description="Note/sound density")
+    brightness: Optional[float] = Field(default=0.5, ge=0.0, le=1.0, description="Tonal quality")
+    temperature: Optional[float] = Field(default=1.1, ge=0.0, le=3.0, description="Generation randomness")
+    top_k: Optional[int] = Field(default=40, ge=1, le=1000, description="Top-k sampling")
+
+
+class WeightedPrompt(BaseModel):
+    """Weighted prompt for music generation."""
+    text: str = Field(..., description="Musical description (genre, instrument, mood)")
+    weight: float = Field(default=1.0, description="Prompt weight")

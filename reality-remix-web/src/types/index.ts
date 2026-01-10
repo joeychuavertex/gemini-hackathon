@@ -36,10 +36,12 @@ export const WebSocketMessageType = {
   FRAME: "frame",
   GENRE_CHANGE: "genre_change",
   AUDIO_CHUNK: "audio_chunk",
+  MUSIC_CHUNK: "music_chunk",
   TURN_COMPLETE: "turn_complete",
   ERROR: "error",
   SESSION_STOP: "session_stop",
   TRANSCRIPTION: "transcription",
+  MUSIC_TOGGLE: "music_toggle",
 } as const;
 
 export type WebSocketMessageType =
@@ -49,6 +51,7 @@ export interface SessionStartMessage {
   type: typeof WebSocketMessageType.SESSION_START;
   genre: Genre;
   fps: number;
+  enable_music?: boolean;
 }
 
 export interface FrameMessage {
@@ -82,20 +85,27 @@ export interface ErrorMessage {
   code?: string;
 }
 
-export interface TranscriptionMessage {
-  type: typeof WebSocketMessageType.TRANSCRIPTION;
-  text: string;
+export interface MusicChunkMessage {
+  type: typeof WebSocketMessageType.MUSIC_CHUNK;
+  data: string; // base64 audio
   timestamp: number;
+}
+
+export interface MusicToggleMessage {
+  type: typeof WebSocketMessageType.MUSIC_TOGGLE;
+  enabled: boolean;
 }
 
 export type ClientMessage =
   | SessionStartMessage
   | FrameMessage
   | GenreChangeMessage
-  | SessionStopMessage;
+  | SessionStopMessage
+  | MusicToggleMessage;
 
 export type ServerMessage =
   | AudioChunkMessage
+  | MusicChunkMessage
   | TurnCompleteMessage
   | ErrorMessage
   | TranscriptionMessage;

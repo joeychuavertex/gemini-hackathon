@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-2.5-flash-native-audio-preview-12-2025"
     GEMINI_WS_URL: str = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent"
 
+    # Google Cloud Platform Configuration (for Lyria Music batch API)
+    GCP_PROJECT_ID: str = ""
+    GCP_LOCATION: str = "us-central1"
+    GCP_SERVICE_ACCOUNT_JSON: str = ""  # Service account JSON as string
+
+    # Music Generation Configuration
+    USE_LYRIA_REALTIME: bool = True  # Use low-latency Lyria RealTime (True) or batch API (False)
+
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = 8000

@@ -19,12 +19,16 @@ from app.models.schemas import (
     FrameMessage,
     GenreChangeMessage,
     AudioChunkMessage,
+    MusicChunkMessage,
+    MusicToggleMessage,
     ErrorMessage,
     TranscriptionMessage,
 )
 from app.services.genre_manager import GenreManager
 from app.services.frame_processor import FrameProcessor
 from app.services.gemini_live_client import GeminiLiveClient
+from app.services.lyria_music_client import LyriaMusicClient
+from app.services.lyria_realtime_client import LyriaRealtimeClient
 from app.services.session_manager import session_manager
 
 # Configure logging
@@ -107,8 +111,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
     session_id = str(uuid.uuid4())
     gemini_client: GeminiLiveClient = None
+    music_client: LyriaMusicClient = None
     frame_processor: FrameProcessor = None
     current_genre: Genre = None
+    music_enabled: bool = True
+    ws_connected: bool = True  # Track WebSocket connection state
 
     logger.info(f"WebSocket connection established: session={session_id}")
 
@@ -123,10 +130,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 if message_type == WebSocketMessageType.SESSION_START:
                     start_msg = SessionStartMessage(**data)
                     current_genre = start_msg.genre
+                    music_enabled = start_msg.enable_music
 
                     logger.info(
                         f"Session {session_id} starting with genre: {current_genre}, "
-                        f"fps: {start_msg.fps}"
+                        f"fps: {start_msg.fps}, music: {music_enabled}"
                     )
 
                     # Create session
@@ -221,6 +229,56 @@ async def websocket_endpoint(websocket: WebSocket):
 
                     logger.info(f"Session {session_id} connected to Gemini")
 
+                    # Initialize music client if enabled
+                    if music_enabled:
+                        async def on_music_chunk(music_data: str):
+                            """Forward music chunks to client."""
+                            nonlocal ws_connected
+                            if not ws_connected:
+                                return  # Skip if WebSocket is closed
+                            try:
+                                import time
+                                music_msg = MusicChunkMessage(
+                                    type=WebSocketMessageType.MUSIC_CHUNK,
+                                    data=music_data,
+                                    timestamp=int(time.time() * 1000)
+                                )
+                                await websocket.send_text(music_msg.model_dump_json())
+                            except Exception as e:
+                                logger.debug(f"Could not send music chunk (client likely disconnected): {e}")
+                                ws_connected = False
+
+                        async def on_music_error(error_msg: str):
+                            """Forward music errors to client."""
+                            logger.warning(f"Music generation error: {error_msg}")
+                            # Don't disconnect on music errors, just log
+
+                        # Use Lyria RealTime for low-latency streaming, or batch API as fallback
+                        if settings.USE_LYRIA_REALTIME:
+                            logger.info(f"Session {session_id} using Lyria RealTime (low-latency)")
+                            music_client = LyriaRealtimeClient(
+                                api_key=settings.GOOGLE_GENERATIVE_AI_API_KEY,
+                                genre=current_genre,
+                                on_music_chunk=on_music_chunk,
+                                on_error=on_music_error,
+                            )
+                        else:
+                            logger.info(f"Session {session_id} using Lyria batch API")
+                            music_client = LyriaMusicClient(
+                                api_key=settings.GOOGLE_GENERATIVE_AI_API_KEY,
+                                genre=current_genre,
+                                on_music_chunk=on_music_chunk,
+                                on_error=on_music_error,
+                            )
+
+                        # Connect and start playing music
+                        music_success = await music_client.connect()
+                        if music_success:
+                            await music_client.play()
+                            logger.info(f"Session {session_id} music generation started")
+                        else:
+                            logger.warning(f"Session {session_id} failed to start music generation")
+
                 # Handle FRAME
                 elif message_type == WebSocketMessageType.FRAME:
                     if not gemini_client or not frame_processor:
@@ -278,7 +336,66 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Change genre in Gemini client (reconnects)
                     await gemini_client.change_genre(new_genre)
 
+                    # Change genre in music client if enabled
+                    if music_client:
+                        await music_client.change_genre(new_genre)
+
                     current_genre = new_genre
+
+                # Handle MUSIC_TOGGLE
+                elif message_type == WebSocketMessageType.MUSIC_TOGGLE:
+                    toggle_msg = MusicToggleMessage(**data)
+                    music_enabled = toggle_msg.enabled
+
+                    logger.info(f"Session {session_id} music toggle: {music_enabled}")
+
+                    if music_enabled and not music_client:
+                        # Start music
+                        async def on_music_chunk(music_data: str):
+                            """Forward music chunks to client."""
+                            nonlocal ws_connected
+                            if not ws_connected:
+                                return  # Skip if WebSocket is closed
+                            try:
+                                import time
+                                music_msg = MusicChunkMessage(
+                                    type=WebSocketMessageType.MUSIC_CHUNK,
+                                    data=music_data,
+                                    timestamp=int(time.time() * 1000)
+                                )
+                                await websocket.send_text(music_msg.model_dump_json())
+                            except Exception as e:
+                                logger.debug(f"Could not send music chunk (client likely disconnected): {e}")
+                                ws_connected = False
+
+                        async def on_music_error(error_msg: str):
+                            """Forward music errors to client."""
+                            logger.warning(f"Music generation error: {error_msg}")
+
+                        # Use Lyria RealTime for low-latency streaming, or batch API as fallback
+                        if settings.USE_LYRIA_REALTIME:
+                            music_client = LyriaRealtimeClient(
+                                api_key=settings.GOOGLE_GENERATIVE_AI_API_KEY,
+                                genre=current_genre,
+                                on_music_chunk=on_music_chunk,
+                                on_error=on_music_error,
+                            )
+                        else:
+                            music_client = LyriaMusicClient(
+                                api_key=settings.GOOGLE_GENERATIVE_AI_API_KEY,
+                                genre=current_genre,
+                                on_music_chunk=on_music_chunk,
+                                on_error=on_music_error,
+                            )
+
+                        music_success = await music_client.connect()
+                        if music_success:
+                            await music_client.play()
+
+                    elif not music_enabled and music_client:
+                        # Stop music
+                        await music_client.disconnect()
+                        music_client = None
 
                 # Handle SESSION_STOP
                 elif message_type == WebSocketMessageType.SESSION_STOP:
@@ -309,14 +426,22 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: session={session_id}")
+        ws_connected = False
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
+        ws_connected = False
 
     finally:
+        # Mark WebSocket as closed to stop async callbacks
+        ws_connected = False
+        
         # Cleanup
         if gemini_client:
             await gemini_client.disconnect()
+
+        if music_client:
+            await music_client.disconnect()
 
         session_manager.end_session(session_id)
 

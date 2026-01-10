@@ -12,6 +12,7 @@ import type {
   FrameMessage,
   GenreChangeMessage,
   SessionStopMessage,
+  MusicToggleMessage,
   ServerMessage,
 } from "../types/index";
 
@@ -107,11 +108,12 @@ export class WebSocketClient {
     }, delay);
   }
 
-  sendSessionStart(genre: Genre, fps: number = 1.0) {
+  sendSessionStart(genre: Genre, fps: number = 1.0, enableMusic: boolean = true) {
     const message: SessionStartMessage = {
       type: WebSocketMessageType.SESSION_START,
       genre,
       fps,
+      enable_music: enableMusic,
     };
 
     console.log("📤 [FRONTEND→BACKEND] SESSION_START:", { genre, fps });
@@ -145,6 +147,15 @@ export class WebSocketClient {
     };
 
     console.log("📤 [FRONTEND→BACKEND] SESSION_STOP");
+    this.send(message);
+  }
+
+  sendMusicToggle(enabled: boolean) {
+    const message: MusicToggleMessage = {
+      type: WebSocketMessageType.MUSIC_TOGGLE,
+      enabled,
+    };
+
     this.send(message);
   }
 

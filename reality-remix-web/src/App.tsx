@@ -7,6 +7,7 @@ import { GenreSelector } from "./components/GenreSelector";
 import { Subtitles } from "./components/Subtitles";
 import { useFrameCapture } from "./hooks/useFrameCapture";
 import { useAudioStream } from "./hooks/useAudioStream";
+import { useMusicStream } from "./hooks/useMusicStream";
 import { WebSocketClient } from "./services/websocket-client";
 import {
   Genre,
@@ -28,9 +29,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [subtitleText, setSubtitleText] = useState<string>("");
   const subtitleHistoryRef = useRef<string[]>([]);
+  const [musicEnabled, setMusicEnabled] = useState(true);
 
   const wsClientRef = useRef<WebSocketClient | null>(null);
   const { playAudioChunk, isPlaying, volume, setVolume, stop: stopAudio } = useAudioStream();
+  const { playMusicChunk, isPlaying: isMusicPlaying, volume: musicVolume, setVolume: setMusicVolume, stop: stopMusic } = useMusicStream();
   const lastCommentaryTimeRef = useRef<number>(0);
   const canSendFrameRef = useRef<boolean>(true);
 
@@ -97,24 +100,20 @@ function App() {
         playAudioChunk(message.data);
         break;
 
-      case WebSocketMessageType.TRANSCRIPTION:
-        console.log("📥 [FRONTEND] Processing TRANSCRIPTION:", { text: message.text, timestamp: message.timestamp });
-        // Accumulate transcription text
-        if (message.text.trim()) {
-          subtitleHistoryRef.current.push(message.text);
-          setSubtitleText(subtitleHistoryRef.current.join(" "));
-        }
+      case WebSocketMessageType.MUSIC_CHUNK:
+        console.log("🎵 Frontend received MUSIC_CHUNK message");
+        playMusicChunk(message.data);
         break;
 
       case WebSocketMessageType.TURN_COMPLETE:
-        console.log("📥 [FRONTEND] Processing TURN_COMPLETE - ready for next frame");
+        console.log("✅ Commentary turn complete - ready for next frame");
         // Enable sending new frames after cooldown
         lastCommentaryTimeRef.current = Date.now();
         canSendFrameRef.current = true;
         break;
 
       case WebSocketMessageType.ERROR:
-        console.error("📥 [FRONTEND] Processing ERROR:", message.message, message.code);
+        console.error("Server error:", message.message);
         setError(message.message);
         canSendFrameRef.current = true; // Allow retry on error
         break;
@@ -150,8 +149,8 @@ function App() {
       // Connect to WebSocket
       await wsClientRef.current.connect();
 
-      // Send session start message
-      wsClientRef.current.sendSessionStart(genre, 1.0);
+      // Send session start message with music enabled
+      wsClientRef.current.sendSessionStart(genre, 1.0, musicEnabled);
 
       setIsSessionActive(true);
 
@@ -172,13 +171,29 @@ function App() {
 
     stopCapture();
     stopAudio(); // Stop audio immediately
-  setIsSessionActive(false);
+    stopMusic(); // Stop music immediately
+    setIsSessionActive(false);
     canSendFrameRef.current = true;
     lastCommentaryTimeRef.current = 0;
     setSubtitleText(""); // Clear subtitles when session stops
     subtitleHistoryRef.current = []; // Clear history
 
     console.log("Session stopped");
+  };
+
+  const toggleMusic = () => {
+    const newMusicEnabled = !musicEnabled;
+    setMusicEnabled(newMusicEnabled);
+
+    if (wsClientRef.current && isSessionActive) {
+      wsClientRef.current.sendMusicToggle(newMusicEnabled);
+    }
+
+    if (!newMusicEnabled) {
+      stopMusic();
+    }
+
+    console.log(`Music ${newMusicEnabled ? "enabled" : "disabled"}`);
   };
 
   const getStatusText = () => {
@@ -224,17 +239,19 @@ function App() {
               onError={(err) => setError(err)}
             />
 
-            {/* Status indicator */}
-            <div className={`status-indicator ${connectionStatus}`}>
-              <div className="status-dot"></div>
-              <span className="status-text">{getStatusText()}</span>
-              {isPlaying && <span className="status-badge">🔊 Playing</span>}
-            </div>
+          {/* Status indicator */}
+          <div className={`status-indicator ${connectionStatus}`}>
+            <div className="status-dot"></div>
+            <span className="status-text">{getStatusText()}</span>
+            {isPlaying && <span className="status-badge">🔊 Playing</span>}
+            {isMusicPlaying && musicEnabled && <span className="status-badge">🎵 Music</span>}
+          </div>
 
-            {/* Volume control */}
-            {isSessionActive && (
+          {/* Volume controls */}
+          {isSessionActive && (
+            <>
               <div className="volume-control">
-                <span className="volume-icon">🔊</span>
+                <span className="volume-icon">🔊 Commentary</span>
                 <input
                   type="range"
                   min="0"
@@ -245,8 +262,30 @@ function App() {
                 />
                 <span className="volume-value">{Math.round(volume * 100)}%</span>
               </div>
-            )}
-          </div>
+
+              <div className="volume-control">
+                <span className="volume-icon">🎵 Music</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={musicVolume * 100}
+                  onChange={(e) => setMusicVolume(Number(e.target.value) / 100)}
+                  className="volume-slider"
+                  disabled={!musicEnabled}
+                />
+                <span className="volume-value">{Math.round(musicVolume * 100)}%</span>
+                <button
+                  onClick={toggleMusic}
+                  className="music-toggle-btn"
+                  title={musicEnabled ? "Disable music" : "Enable music"}
+                >
+                  {musicEnabled ? "🔊" : "🔇"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
           <div className="controls-section">
             {error && <div className="error-banner">{error}</div>}
