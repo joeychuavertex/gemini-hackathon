@@ -16,6 +16,10 @@ export const Genre = {
   CORPORATE: "corporate_consultant",
   ACADEMIC: "overly_serious_academic",
   MUSICAL: "musical_narrator",
+  ANIME: "anime_narrator",
+  STANDUP: "standup_comedian",
+  SINGAPOREAN: "singaporean",
+  SUNDAR_PICHAI: "sundar_pichai",
 } as const;
 
 export type Genre = (typeof Genre)[keyof typeof Genre];
@@ -184,5 +188,29 @@ export const GENRE_INFO: Record<Genre, GenreInfo> = {
     name: "Musical Narrator",
     description: "Describes scenes as if breaking into song.",
     icon: "🎼",
+  },
+  [Genre.ANIME]: {
+    id: Genre.ANIME,
+    name: "Anime Narrator",
+    description: "Dramatic anime-style commentary with intense energy.",
+    icon: "🎌",
+  },
+  [Genre.STANDUP]: {
+    id: Genre.STANDUP,
+    name: "Standup Comedian",
+    description: "Witty, observational comedy commentary.",
+    icon: "🎤",
+  },
+  [Genre.SINGAPOREAN]: {
+    id: Genre.SINGAPOREAN,
+    name: "Singaporean",
+    description: "Commentary in Singaporean style with local flair.",
+    icon: "🇸🇬",
+  },
+  [Genre.SUNDAR_PICHAI]: {
+    id: Genre.SUNDAR_PICHAI,
+    name: "Sundar Pichai",
+    description: "Thoughtful, measured tech executive commentary.",
+    icon: "👔",
   },
 };

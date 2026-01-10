@@ -21,6 +21,10 @@ class Genre(str, Enum):
     CORPORATE = "corporate_consultant"
     ACADEMIC = "overly_serious_academic"
     MUSICAL = "musical_narrator"
+    ANIME = "anime_narrator"
+    STANDUP = "standup_comedian"
+    SINGAPOREAN = "singaporean"
+    SUNDAR_PICHAI = "sundar_pichai"
 
 
 class WebSocketMessageType(str, Enum):
