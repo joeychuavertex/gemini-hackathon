@@ -31,6 +31,8 @@ function App() {
   const [subtitleText, setSubtitleText] = useState<string>("");
   const subtitleHistoryRef = useRef<string[]>([]);
   const [musicEnabled, setMusicEnabled] = useState(true);
+  // Keep setMusicEnabled for potential future use (currently unused since UI controls are hidden)
+  void setMusicEnabled;
 
   const wsClientRef = useRef<WebSocketClient | null>(null);
   const cameraViewRef = useRef<CameraViewRef>(null);
@@ -39,8 +41,8 @@ function App() {
   useEffect(() => {
     videoElementRef.current = videoElement;
   }, [videoElement]);
-  const { playAudioChunk, isPlaying, stop: stopAudio, volume, setVolume } = useAudioStream();
-  const { playMusicChunk, isPlaying: isMusicPlaying, volume: musicVolume, setVolume: setMusicVolume, stop: stopMusic } = useMusicStream();
+  const { playAudioChunk, isPlaying, stop: stopAudio, volume: _volume, setVolume: _setVolume } = useAudioStream();
+  const { playMusicChunk, isPlaying: isMusicPlaying, volume: _musicVolume, setVolume: _setMusicVolume, stop: stopMusic } = useMusicStream();
   const lastCommentaryTimeRef = useRef<number>(0);
   const canSendFrameRef = useRef<boolean>(true);
 
@@ -225,20 +227,21 @@ function App() {
     console.log("Session stopped");
   };
 
-  const toggleMusic = () => {
-    const newMusicEnabled = !musicEnabled;
-    setMusicEnabled(newMusicEnabled);
+  // Music toggle function - hidden with UI controls
+  // const _toggleMusic = () => {
+  //   const newMusicEnabled = !musicEnabled;
+  //   setMusicEnabled(newMusicEnabled);
 
-    if (wsClientRef.current && isSessionActive) {
-      wsClientRef.current.sendMusicToggle(newMusicEnabled);
-    }
+  //   if (wsClientRef.current && isSessionActive) {
+  //     wsClientRef.current.sendMusicToggle(newMusicEnabled);
+  //   }
 
-    if (!newMusicEnabled) {
-      stopMusic();
-    }
+  //   if (!newMusicEnabled) {
+  //     stopMusic();
+  //   }
 
-    console.log(`Music ${newMusicEnabled ? "enabled" : "disabled"}`);
-  };
+  //   console.log(`Music ${newMusicEnabled ? "enabled" : "disabled"}`);
+  // };
 
   const getStatusText = () => {
     switch (connectionStatus) {
@@ -306,8 +309,8 @@ function App() {
             {isMusicPlaying && musicEnabled && <span className="status-badge">🎵 Music</span>}
           </div>
 
-          {/* Volume controls */}
-          {isSessionActive && (
+          {/* Volume controls - Hidden */}
+          {/* {isSessionActive && (
             <>
               <div className="volume-control">
                 <span className="volume-icon">🔊 Commentary</span>
@@ -343,7 +346,7 @@ function App() {
                 </button>
               </div>
             </>
-          )}
+          )} */}
           <div className="controls-section">
             {error && <div className="error-banner">{error}</div>}
           </div>
