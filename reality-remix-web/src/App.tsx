@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CameraView } from "./components/CameraView";
 import { GenreSelector } from "./components/GenreSelector";
+import { Subtitles } from "./components/Subtitles";
 import { useFrameCapture } from "./hooks/useFrameCapture";
 import { useAudioStream } from "./hooks/useAudioStream";
 import { WebSocketClient } from "./services/websocket-client";
@@ -25,6 +26,8 @@ function App() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [subtitleText, setSubtitleText] = useState<string>("");
+  const subtitleHistoryRef = useRef<string[]>([]);
 
   const wsClientRef = useRef<WebSocketClient | null>(null);
   const { playAudioChunk, isPlaying, volume, setVolume, stop: stopAudio } = useAudioStream();
@@ -86,26 +89,38 @@ function App() {
   }, []);
 
   const handleServerMessage = (message: ServerMessage) => {
+    console.log("📥 [FRONTEND] Handling message:", message.type, message);
+    
     switch (message.type) {
       case WebSocketMessageType.AUDIO_CHUNK:
+        console.log("📥 [FRONTEND] Processing AUDIO_CHUNK:", { size: message.data.length, timestamp: message.timestamp });
         playAudioChunk(message.data);
         break;
 
+      case WebSocketMessageType.TRANSCRIPTION:
+        console.log("📥 [FRONTEND] Processing TRANSCRIPTION:", { text: message.text, timestamp: message.timestamp });
+        // Accumulate transcription text
+        if (message.text.trim()) {
+          subtitleHistoryRef.current.push(message.text);
+          setSubtitleText(subtitleHistoryRef.current.join(" "));
+        }
+        break;
+
       case WebSocketMessageType.TURN_COMPLETE:
-  console.log("✅ Commentary turn complete - ready for next frame");
+        console.log("📥 [FRONTEND] Processing TURN_COMPLETE - ready for next frame");
         // Enable sending new frames after cooldown
         lastCommentaryTimeRef.current = Date.now();
         canSendFrameRef.current = true;
         break;
 
       case WebSocketMessageType.ERROR:
-  console.error("Server error:", message.message);
+        console.error("📥 [FRONTEND] Processing ERROR:", message.message, message.code);
         setError(message.message);
         canSendFrameRef.current = true; // Allow retry on error
         break;
 
       default:
-        console.log("Unknown message type:", message);
+        console.log("📥 [FRONTEND] Unknown message type:", message);
     }
   };
 
@@ -160,6 +175,8 @@ function App() {
   setIsSessionActive(false);
     canSendFrameRef.current = true;
     lastCommentaryTimeRef.current = 0;
+    setSubtitleText(""); // Clear subtitles when session stops
+    subtitleHistoryRef.current = []; // Clear history
 
     console.log("Session stopped");
   };
@@ -256,6 +273,13 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* Subtitles box */}
+        {isSessionActive && (
+          <div className="subtitles-section">
+            <Subtitles text={subtitleText} isActive={isSessionActive} />
+          </div>
+        )}
       </main>
 
       <footer className="app-footer">

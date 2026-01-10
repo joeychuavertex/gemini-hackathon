@@ -32,6 +32,7 @@ class WebSocketMessageType(str, Enum):
     TURN_COMPLETE = "turn_complete"
     ERROR = "error"
     SESSION_STOP = "session_stop"
+    TRANSCRIPTION = "transcription"
 
 
 class SessionStartMessage(BaseModel):
@@ -76,6 +77,13 @@ class ErrorMessage(BaseModel):
     type: Literal[WebSocketMessageType.ERROR] = WebSocketMessageType.ERROR
     message: str
     code: Optional[str] = None
+
+
+class TranscriptionMessage(BaseModel):
+    """Server message containing transcription text."""
+    type: Literal[WebSocketMessageType.TRANSCRIPTION] = WebSocketMessageType.TRANSCRIPTION
+    text: str = Field(..., description="Transcribed text from audio output")
+    timestamp: int = Field(..., description="Server timestamp in milliseconds")
 
 
 class GenreInfo(BaseModel):

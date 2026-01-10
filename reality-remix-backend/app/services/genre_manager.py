@@ -309,6 +309,7 @@ class GenreManager:
                             "text": system_prompt
                         }
                     ]
-                }
+                },
+                "output_audio_transcription": {}
             }
         }

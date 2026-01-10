@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # Gemini API Configuration
     GOOGLE_GENERATIVE_AI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.5-flash-native-audio-dialog"
+    GEMINI_MODEL: str = "gemini-2.5-flash-native-audio-preview-12-2025"
     GEMINI_WS_URL: str = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent"
 
     # Server Configuration

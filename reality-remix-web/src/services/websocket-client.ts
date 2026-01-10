@@ -50,6 +50,7 @@ export class WebSocketClient {
         this.ws.onmessage = (event) => {
           try {
             const message: ServerMessage = JSON.parse(event.data);
+            console.log("📥 [BACKEND→FRONTEND] Received message:", message.type, message);
             this.handleMessage(message);
           } catch (error) {
             console.error("Failed to parse WebSocket message:", error);
@@ -113,6 +114,7 @@ export class WebSocketClient {
       fps,
     };
 
+    console.log("📤 [FRONTEND→BACKEND] SESSION_START:", { genre, fps });
     this.send(message);
   }
 
@@ -123,6 +125,7 @@ export class WebSocketClient {
       timestamp,
     };
 
+    console.log("📤 [FRONTEND→BACKEND] FRAME:", { size: base64Jpeg.length, timestamp });
     this.send(message);
   }
 
@@ -132,6 +135,7 @@ export class WebSocketClient {
       genre,
     };
 
+    console.log("📤 [FRONTEND→BACKEND] GENRE_CHANGE:", genre);
     this.send(message);
   }
 
@@ -140,6 +144,7 @@ export class WebSocketClient {
       type: WebSocketMessageType.SESSION_STOP,
     };
 
+    console.log("📤 [FRONTEND→BACKEND] SESSION_STOP");
     this.send(message);
   }
 

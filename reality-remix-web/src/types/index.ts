@@ -35,6 +35,7 @@ export const WebSocketMessageType = {
   TURN_COMPLETE: "turn_complete",
   ERROR: "error",
   SESSION_STOP: "session_stop",
+  TRANSCRIPTION: "transcription",
 } as const;
 
 export type WebSocketMessageType =
@@ -77,6 +78,12 @@ export interface ErrorMessage {
   code?: string;
 }
 
+export interface TranscriptionMessage {
+  type: typeof WebSocketMessageType.TRANSCRIPTION;
+  text: string;
+  timestamp: number;
+}
+
 export type ClientMessage =
   | SessionStartMessage
   | FrameMessage
@@ -86,7 +93,8 @@ export type ClientMessage =
 export type ServerMessage =
   | AudioChunkMessage
   | TurnCompleteMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | TranscriptionMessage;
 
 export const ConnectionStatus = {
   DISCONNECTED: "disconnected",

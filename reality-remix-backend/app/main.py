@@ -20,6 +20,7 @@ from app.models.schemas import (
     GenreChangeMessage,
     AudioChunkMessage,
     ErrorMessage,
+    TranscriptionMessage,
 )
 from app.services.genre_manager import GenreManager
 from app.services.frame_processor import FrameProcessor
@@ -116,6 +117,7 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 data = json.loads(message)
                 message_type = data.get("type")
+                logger.info(f"📥 [FRONTEND→BACKEND] Received message type: {message_type}")
 
                 # Handle SESSION_START
                 if message_type == WebSocketMessageType.SESSION_START:
@@ -157,14 +159,32 @@ async def websocket_endpoint(websocket: WebSocket):
                             data=audio_data,
                             timestamp=int(time.time() * 1000)
                         )
-                        await websocket.send_text(audio_msg.model_dump_json())
+                        msg_json = audio_msg.model_dump_json()
+                        logger.info(f"📤 [BACKEND→FRONTEND] AUDIO_CHUNK: size={len(audio_data)} chars, timestamp={audio_msg.timestamp}")
+                        await websocket.send_text(msg_json)
+
+                    async def on_transcription(transcription_text: str):
+                        """Forward transcription to client."""
+                        import time
+                        transcription_msg = TranscriptionMessage(
+                            type=WebSocketMessageType.TRANSCRIPTION,
+                            text=transcription_text,
+                            timestamp=int(time.time() * 1000)
+                        )
+                        msg_json = transcription_msg.model_dump_json()
+                        logger.info(f"📤 [BACKEND→FRONTEND] TRANSCRIPTION (full text):")
+                        logger.info(f"   '{transcription_text}'")
+                        logger.info(f"   timestamp={transcription_msg.timestamp}")
+                        await websocket.send_text(msg_json)
 
                     async def on_turn_complete():
                         """Notify client of turn complete."""
                         turn_msg = {
                             "type": WebSocketMessageType.TURN_COMPLETE
                         }
-                        await websocket.send_text(json.dumps(turn_msg))
+                        msg_json = json.dumps(turn_msg)
+                        logger.info(f"📤 [BACKEND→FRONTEND] TURN_COMPLETE")
+                        await websocket.send_text(msg_json)
 
                     async def on_error(error_msg: str):
                         """Forward errors to client."""
@@ -173,7 +193,9 @@ async def websocket_endpoint(websocket: WebSocket):
                             message=error_msg,
                             code="GEMINI_ERROR"
                         )
-                        await websocket.send_text(error.model_dump_json())
+                        msg_json = error.model_dump_json()
+                        logger.info(f"📤 [BACKEND→FRONTEND] ERROR: message='{error_msg}', code={error.code}")
+                        await websocket.send_text(msg_json)
 
                     gemini_client = GeminiLiveClient(
                         api_key=settings.GOOGLE_GENERATIVE_AI_API_KEY,
@@ -181,6 +203,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         on_audio_chunk=on_audio_chunk,
                         on_turn_complete=on_turn_complete,
                         on_error=on_error,
+                        on_transcription=on_transcription,
                     )
 
                     # Connect to Gemini
@@ -205,6 +228,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         continue
 
                     frame_msg = FrameMessage(**data)
+                    logger.debug(f"📥 [FRONTEND→BACKEND] FRAME: size={len(frame_msg.data)} chars, timestamp={frame_msg.timestamp}")
 
                     # Process frame
                     try:
@@ -241,6 +265,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     genre_msg = GenreChangeMessage(**data)
                     new_genre = genre_msg.genre
 
+                    logger.info(f"📥 [FRONTEND→BACKEND] GENRE_CHANGE: {new_genre}")
                     logger.info(f"Session {session_id} changing genre to {new_genre}")
 
                     # Update session
@@ -257,6 +282,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 # Handle SESSION_STOP
                 elif message_type == WebSocketMessageType.SESSION_STOP:
+                    logger.info(f"📥 [FRONTEND→BACKEND] SESSION_STOP")
                     logger.info(f"Session {session_id} stopping by client request")
                     break
 

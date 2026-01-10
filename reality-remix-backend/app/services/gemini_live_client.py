@@ -25,6 +25,7 @@ class GeminiLiveClient:
         on_audio_chunk: Optional[Callable[[str], Awaitable[None]]] = None,
         on_turn_complete: Optional[Callable[[], Awaitable[None]]] = None,
         on_error: Optional[Callable[[str], Awaitable[None]]] = None,
+        on_transcription: Optional[Callable[[str], Awaitable[None]]] = None,
     ):
         """
         Initialize Gemini Live API client.
@@ -41,6 +42,7 @@ class GeminiLiveClient:
         self.on_audio_chunk = on_audio_chunk
         self.on_turn_complete = on_turn_complete
         self.on_error = on_error
+        self.on_transcription = on_transcription
 
         self.websocket: Optional[WebSocketClientProtocol] = None
         self.is_connected = False
@@ -196,12 +198,49 @@ class GeminiLiveClient:
         """
         try:
             data = json.loads(message)
-            logger.debug(f"📥 Gemini message keys: {list(data.keys())}")
+            logger.info(f"📥 [GEMINI→BACKEND] Full message keys: {list(data.keys())}")
+            logger.debug(f"📥 [GEMINI→BACKEND] Full message structure: {json.dumps(data, indent=2)}")
 
             # Handle server content (audio response)
             if "serverContent" in data:
                 server_content = data["serverContent"]
                 logger.info(f"📦 serverContent keys: {list(server_content.keys())}")
+                
+                # Check for transcription in outputTranscription (this is where it comes from!)
+                if "outputTranscription" in server_content:
+                    output_transcription = server_content.get("outputTranscription", {})
+                    logger.info(f"📝 [GEMINI→BACKEND] Found outputTranscription: {output_transcription}")
+                    logger.info(f"📝 [GEMINI→BACKEND] outputTranscription type: {type(output_transcription)}")
+                    
+                    # outputTranscription can be a string or an object with text field
+                    if isinstance(output_transcription, str):
+                        transcription_text = output_transcription
+                        logger.info(f"📝 [GEMINI→BACKEND] outputTranscription is a string")
+                    elif isinstance(output_transcription, dict):
+                        transcription_text = output_transcription.get("text", "")
+                        logger.info(f"📝 [GEMINI→BACKEND] outputTranscription dict keys: {list(output_transcription.keys())}")
+                        logger.info(f"📝 [GEMINI→BACKEND] outputTranscription full dict: {json.dumps(output_transcription, indent=2)}")
+                    else:
+                        transcription_text = str(output_transcription)
+                        logger.info(f"📝 [GEMINI→BACKEND] outputTranscription is other type, converting to string")
+                    
+                    if transcription_text:
+                        logger.info(f"📝 [GEMINI→BACKEND] Got transcription (full text):")
+                        logger.info(f"   '{transcription_text}'")
+                        if self.on_transcription:
+                            await self.on_transcription(transcription_text)
+                            logger.info(f"📝 [GEMINI→BACKEND] Forwarded transcription to frontend callback")
+                    else:
+                        logger.warning(f"📝 [GEMINI→BACKEND] outputTranscription found but transcription_text is empty")
+                
+                # Check for transcription at serverContent level (legacy)
+                if "serverText" in server_content:
+                    server_text = server_content.get("serverText", "")
+                    logger.info(f"📝 [GEMINI→BACKEND] Found serverText (transcription):")
+                    logger.info(f"   '{server_text}'")
+                    if server_text and self.on_transcription:
+                        await self.on_transcription(server_text)
+                        logger.info(f"📝 [GEMINI→BACKEND] Forwarded serverText transcription to frontend callback")
 
                 # Extract audio chunks
                 if "modelTurn" in server_content:
@@ -212,6 +251,7 @@ class GeminiLiveClient:
                         logger.info(f"🧩 Found {len(model_turn['parts'])} parts")
                         for i, part in enumerate(model_turn["parts"]):
                             logger.info(f"  Part {i} keys: {list(part.keys())}")
+                            logger.debug(f"  Part {i} full content: {json.dumps(part, indent=2)}")
 
                             if "inlineData" in part:
                                 inline_data = part["inlineData"]
@@ -227,6 +267,24 @@ class GeminiLiveClient:
                                         logger.info(f"🔊 Sent audio chunk to frontend (size: {len(audio_data)})")
                                     else:
                                         logger.warning("⚠️ Audio data empty or no callback")
+                            
+                            # Handle transcription text in parts
+                            if "text" in part:
+                                transcription_text = part.get("text", "")
+                                logger.info(f"📝 [GEMINI→BACKEND] Got transcription in part (full text):")
+                                logger.info(f"   '{transcription_text}'")
+                                if transcription_text and self.on_transcription:
+                                    await self.on_transcription(transcription_text)
+                                    logger.info(f"📝 [GEMINI→BACKEND] Forwarded transcription to frontend callback")
+                
+                # Also check top-level data for transcription
+                if "serverText" in data:
+                    server_text = data.get("serverText", "")
+                    logger.info(f"📝 [GEMINI→BACKEND] Found serverText at top level (transcription):")
+                    logger.info(f"   '{server_text}'")
+                    if server_text and self.on_transcription:
+                        await self.on_transcription(server_text)
+                        logger.info(f"📝 [GEMINI→BACKEND] Forwarded top-level serverText to frontend callback")
 
                 # Handle turn complete
                 if server_content.get("turnComplete"):
