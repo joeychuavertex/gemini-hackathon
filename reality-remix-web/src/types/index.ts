@@ -20,6 +20,8 @@ export const Genre = {
   STANDUP: "standup_comedian",
   SINGAPOREAN: "singaporean",
   SUNDAR_PICHAI: "sundar_pichai",
+  TIKTOK_INFLUENCER: "tiktok_influencer",
+  ASIAN_PARENT: "asian_parent",
 } as const;
 
 export type Genre = (typeof Genre)[keyof typeof Genre];
@@ -85,6 +87,7 @@ export interface ErrorMessage {
 export interface TranscriptionMessage {
   type: typeof WebSocketMessageType.TRANSCRIPTION;
   text: string;
+  transcription_type: "observation" | "speaking";
   timestamp: number;
 }
 
@@ -212,5 +215,17 @@ export const GENRE_INFO: Record<Genre, GenreInfo> = {
     name: "Sundar Pichai",
     description: "Thoughtful, measured tech executive commentary.",
     icon: "👔",
+  },
+  [Genre.TIKTOK_INFLUENCER]: {
+    id: Genre.TIKTOK_INFLUENCER,
+    name: "TikTok Influencer",
+    description: "Energetic, trend-focused commentary with viral energy.",
+    icon: "📱",
+  },
+  [Genre.ASIAN_PARENT]: {
+    id: Genre.ASIAN_PARENT,
+    name: "Asian Parent",
+    description: "Caring commentary with typical Asian parent concerns and expressions.",
+    icon: "👨‍👩‍👧",
   },
 };

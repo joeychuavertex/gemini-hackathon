@@ -25,6 +25,8 @@ class Genre(str, Enum):
     STANDUP = "standup_comedian"
     SINGAPOREAN = "singaporean"
     SUNDAR_PICHAI = "sundar_pichai"
+    TIKTOK_INFLUENCER = "tiktok_influencer"
+    ASIAN_PARENT = "asian_parent"
 
 
 class WebSocketMessageType(str, Enum):
@@ -87,6 +89,7 @@ class TranscriptionMessage(BaseModel):
     """Server message containing transcription text."""
     type: Literal[WebSocketMessageType.TRANSCRIPTION] = WebSocketMessageType.TRANSCRIPTION
     text: str = Field(..., description="Transcribed text from audio output")
+    transcription_type: Literal["observation", "speaking"] = Field(default="speaking", description="Type of transcription: observation (internal thinking) or speaking (actual commentary)")
     timestamp: int = Field(..., description="Server timestamp in milliseconds")
 
 
