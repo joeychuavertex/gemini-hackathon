@@ -125,6 +125,15 @@ function App() {
         canSendFrameRef.current = true; // Allow retry on error
         break;
 
+      case WebSocketMessageType.TRANSCRIPTION:
+        console.log("📝 [FRONTEND] Transcription received:", message.text);
+        // Accumulate transcription text
+        if (message.text.trim()) {
+          subtitleHistoryRef.current.push(message.text);
+          setSubtitleText(subtitleHistoryRef.current.join(" "));
+        }
+        break;
+
       default:
         console.log("📥 [FRONTEND] Unknown message type:", message);
     }
