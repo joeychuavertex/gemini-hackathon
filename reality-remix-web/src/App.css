@@ -105,12 +105,14 @@ body {
 .app-main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 400px;
+  grid-template-rows: auto;
   gap: 2rem;
   padding: 2rem;
-  max-width: 1400px;
+  max-width: 1600px;
   width: 100%;
   margin: 0 auto;
+  align-items: start;
 }
 
 @media (max-width: 1024px) {
@@ -119,8 +121,17 @@ body {
   }
 }
 
+.left-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
 .video-section {
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .controls-section {
@@ -131,9 +142,13 @@ body {
 
 .subtitles-section {
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+}
+
+.subtitles-section > * {
+  width: 100%;
 }
 
 /* Status indicator */

@@ -217,71 +217,62 @@ function App() {
       </div>
 
       <main className="app-main">
-        <div className="video-section">
-          <CameraView
-            onVideoReady={setVideoElement}
-            onError={(err) => setError(err)}
-          />
+        <div className="left-section">
+          <div className="video-section">
+            <CameraView
+              onVideoReady={setVideoElement}
+              onError={(err) => setError(err)}
+            />
 
-          {/* Status indicator */}
-          <div className={`status-indicator ${connectionStatus}`}>
-            <div className="status-dot"></div>
-            <span className="status-text">{getStatusText()}</span>
-            {isPlaying && <span className="status-badge">🔊 Playing</span>}
-          </div>
-
-          {/* Volume control */}
-          {isSessionActive && (
-            <div className="volume-control">
-              <span className="volume-icon">🔊</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume * 100}
-                onChange={(e) => setVolume(Number(e.target.value) / 100)}
-                className="volume-slider"
-              />
-              <span className="volume-value">{Math.round(volume * 100)}%</span>
+            {/* Status indicator */}
+            <div className={`status-indicator ${connectionStatus}`}>
+              <div className="status-dot"></div>
+              <span className="status-text">{getStatusText()}</span>
+              {isPlaying && <span className="status-badge">🔊 Playing</span>}
             </div>
-          )}
-        </div>
 
-        <div className="controls-section">
-          {error && <div className="error-banner">{error}</div>}
-
-          <div className="action-buttons">
-            {!isSessionActive ? (
-              <button
-                onClick={startSession}
-                disabled={!genre || !videoElement}
-                className="primary-btn start-btn"
-              >
-                🎭 Start Commentary
-              </button>
-            ) : (
-              <button onClick={stopSession} className="primary-btn stop-btn">
-                ⏹️ Stop Commentary
-              </button>
+            {/* Volume control */}
+            {isSessionActive && (
+              <div className="volume-control">
+                <span className="volume-icon">🔊</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume * 100}
+                  onChange={(e) => setVolume(Number(e.target.value) / 100)}
+                  className="volume-slider"
+                />
+                <span className="volume-value">{Math.round(volume * 100)}%</span>
+              </div>
             )}
           </div>
 
-          {genre && (
-            <div className="current-genre">
-              <p className="current-genre-label">Current Genre:</p>
-              <p className="current-genre-name">
-                {genre.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
-              </p>
+          <div className="controls-section">
+            {error && <div className="error-banner">{error}</div>}
+
+            <div className="action-buttons">
+              {!isSessionActive ? (
+                <button
+                  onClick={startSession}
+                  disabled={!genre || !videoElement}
+                  className="primary-btn start-btn"
+                >
+                  🎭 Start Commentary
+                </button>
+              ) : (
+                <button onClick={stopSession} className="primary-btn stop-btn">
+                  ⏹️ Stop Commentary
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Subtitles box */}
-        {isSessionActive && (
-          <div className="subtitles-section">
-            <Subtitles text={subtitleText} isActive={isSessionActive} />
-          </div>
-        )}
+        {/* Subtitles box - permanently visible on the right */}
+        <div className="subtitles-section">
+          <Subtitles text={subtitleText} isActive={true} />
+        </div>
       </main>
 
       <footer className="app-footer">

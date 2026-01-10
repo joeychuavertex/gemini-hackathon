@@ -9,7 +9,7 @@ interface SubtitlesProps {
   isActive: boolean;
 }
 
-export function Subtitles({ text, isActive }: SubtitlesProps) {
+export function Subtitles({ text }: SubtitlesProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
 
@@ -23,10 +23,6 @@ export function Subtitles({ text, isActive }: SubtitlesProps) {
       });
     }
   }, [text]);
-
-  if (!isActive || !text) {
-    return null;
-  }
 
   return (
     <div className="subtitles-container" ref={containerRef}>
