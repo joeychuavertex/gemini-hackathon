@@ -2,7 +2,7 @@
  * The Reality Remix - Main Application Component
  */
 import { useState, useEffect, useRef, useCallback } from "react";
-import { CameraView } from "./components/CameraView";
+import { CameraView, type CameraViewRef } from "./components/CameraView";
 import { GenreSelector } from "./components/GenreSelector";
 import { Subtitles } from "./components/Subtitles";
 import { useFrameCapture } from "./hooks/useFrameCapture";
@@ -25,12 +25,19 @@ function App() {
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
     null
   );
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subtitleText, setSubtitleText] = useState<string>("");
   const subtitleHistoryRef = useRef<string[]>([]);
 
   const wsClientRef = useRef<WebSocketClient | null>(null);
-  const { playAudioChunk, isPlaying, volume, setVolume, stop: stopAudio } = useAudioStream();
+  const cameraViewRef = useRef<CameraViewRef>(null);
+
+  // Update ref when video element changes
+  useEffect(() => {
+    videoElementRef.current = videoElement;
+  }, [videoElement]);
+  const { playAudioChunk, isPlaying, stop: stopAudio } = useAudioStream();
   const lastCommentaryTimeRef = useRef<number>(0);
   const canSendFrameRef = useRef<boolean>(true);
 
@@ -143,13 +150,28 @@ function App() {
   };
 
   const startSession = async () => {
-    if (!wsClientRef.current || !genre || !videoElement) {
-      setError("Please select a genre and enable camera first");
+    if (!wsClientRef.current || !genre) {
+      setError("Please select a genre first");
       return;
     }
 
     try {
       setError(null);
+
+      // Start camera first if not already active
+      if (cameraViewRef.current && !cameraViewRef.current.isActive) {
+        await cameraViewRef.current.startCamera();
+      }
+
+      // Wait for video element to be ready (poll with timeout)
+      const maxWaitTime = 2000; // 2 seconds max wait
+      const pollInterval = 100; // Check every 100ms
+      let waited = 0;
+
+      while (!videoElementRef.current && waited < maxWaitTime) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        waited += pollInterval;
+      }
 
       // Connect to WebSocket
       await wsClientRef.current.connect();
@@ -165,6 +187,9 @@ function App() {
         err instanceof Error ? err.message : "Failed to start session";
       setError(errorMsg);
       console.error("Error starting session:", err);
+      
+      // If camera was started but session failed, we might want to keep camera running
+      // or stop it - for now, we'll leave it running so user can retry
     }
   };
 
@@ -176,11 +201,16 @@ function App() {
 
     stopCapture();
     stopAudio(); // Stop audio immediately
-  setIsSessionActive(false);
+    setIsSessionActive(false);
     canSendFrameRef.current = true;
     lastCommentaryTimeRef.current = 0;
     setSubtitleText(""); // Clear subtitles when session stops
     subtitleHistoryRef.current = []; // Clear history
+
+    // Stop camera
+    if (cameraViewRef.current) {
+      cameraViewRef.current.stopCamera();
+    }
 
     console.log("Session stopped");
   };
@@ -224,8 +254,16 @@ function App() {
         <div className="left-section">
           <div className="video-section">
             <CameraView
-              onVideoReady={setVideoElement}
+              ref={cameraViewRef}
+              onVideoReady={(element) => {
+                setVideoElement(element);
+                videoElementRef.current = element;
+              }}
               onError={(err) => setError(err)}
+              onStartSession={startSession}
+              onStopSession={stopSession}
+              isSessionActive={isSessionActive}
+              genre={genre}
             />
 
             {/* Status indicator */}
@@ -234,42 +272,10 @@ function App() {
               <span className="status-text">{getStatusText()}</span>
               {isPlaying && <span className="status-badge">🔊 Playing</span>}
             </div>
-
-            {/* Volume control */}
-            {isSessionActive && (
-              <div className="volume-control">
-                <span className="volume-icon">🔊</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume * 100}
-                  onChange={(e) => setVolume(Number(e.target.value) / 100)}
-                  className="volume-slider"
-                />
-                <span className="volume-value">{Math.round(volume * 100)}%</span>
-              </div>
-            )}
           </div>
 
           <div className="controls-section">
             {error && <div className="error-banner">{error}</div>}
-
-            <div className="action-buttons">
-              {!isSessionActive ? (
-                <button
-                  onClick={startSession}
-                  disabled={!genre || !videoElement}
-                  className="primary-btn start-btn"
-                >
-                  🎭 Start Commentary
-                </button>
-              ) : (
-                <button onClick={stopSession} className="primary-btn stop-btn">
-                  ⏹️ Stop Commentary
-                </button>
-              )}
-            </div>
           </div>
         </div>
 
