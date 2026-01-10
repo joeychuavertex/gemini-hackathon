@@ -91,6 +91,8 @@ export interface TranscriptionMessage {
   type: typeof WebSocketMessageType.TRANSCRIPTION;
   text: string;
   transcription_type: "observation" | "speaking";
+}
+
 export interface MusicChunkMessage {
   type: typeof WebSocketMessageType.MUSIC_CHUNK;
   data: string; // base64 audio

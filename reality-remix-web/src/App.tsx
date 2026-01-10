@@ -39,7 +39,7 @@ function App() {
   useEffect(() => {
     videoElementRef.current = videoElement;
   }, [videoElement]);
-  const { playAudioChunk, isPlaying, stop: stopAudio } = useAudioStream();
+  const { playAudioChunk, isPlaying, stop: stopAudio, volume, setVolume } = useAudioStream();
   const { playMusicChunk, isPlaying: isMusicPlaying, volume: musicVolume, setVolume: setMusicVolume, stop: stopMusic } = useMusicStream();
   const lastCommentaryTimeRef = useRef<number>(0);
   const canSendFrameRef = useRef<boolean>(true);
@@ -335,8 +335,6 @@ function App() {
               </div>
             </>
           )}
-        </div>
-
           <div className="controls-section">
             {error && <div className="error-banner">{error}</div>}
           </div>
