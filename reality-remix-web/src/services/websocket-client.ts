@@ -19,6 +19,35 @@ import type {
 export type MessageHandler = (message: ServerMessage) => void;
 export type ConnectionStatusHandler = (status: ConnectionStatus) => void;
 
+// Determine WebSocket URL based on environment
+function getDefaultWebSocketUrl(): string {
+  // Check for environment variable first (set in Vercel)
+  const envUrl = import.meta.env.VITE_WEBSOCKET_URL;
+  if (envUrl) {
+    console.log('🔌 Using VITE_WEBSOCKET_URL:', envUrl);
+    return envUrl;
+  }
+  
+  // In production (not localhost), check for backend URL
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    if (backendUrl) {
+      const wsUrl = backendUrl.replace(/^http/, 'ws') + '/ws/reality-remix';
+      console.log('🔌 Using VITE_BACKEND_URL:', wsUrl);
+      return wsUrl;
+    }
+    
+    // No backend URL configured - this will fail but show a clear error
+    console.error('❌ No backend URL configured! Set VITE_WEBSOCKET_URL or VITE_BACKEND_URL in Vercel environment variables.');
+    console.error('❌ The Python backend needs to be deployed separately (e.g., Railway, Render, Cloud Run).');
+    // Return a placeholder that will fail with a clear message
+    return "wss://backend-not-configured.invalid/ws/reality-remix";
+  }
+  
+  // Default to localhost for development
+  return "ws://localhost:8000/ws/reality-remix";
+}
+
 export class WebSocketClient {
   private ws: WebSocket | null = null;
   private url: string;
@@ -29,8 +58,9 @@ export class WebSocketClient {
   private reconnectDelay = 1000; // Start with 1 second
   private reconnectTimeout: number | null = null;
 
-  constructor(url: string = "ws://localhost:8000/ws/reality-remix") {
+  constructor(url: string = getDefaultWebSocketUrl()) {
     this.url = url;
+    console.log('🔌 WebSocket URL:', this.url);
   }
 
   connect(): Promise<void> {
