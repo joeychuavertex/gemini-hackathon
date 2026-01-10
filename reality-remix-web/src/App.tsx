@@ -208,6 +208,14 @@ function App() {
         </p>
       </header>
 
+      <div className="genre-section">
+        <GenreSelector
+          selectedGenre={genre}
+          onSelectGenre={handleGenreSelect}
+          disabled={false}
+        />
+      </div>
+
       <main className="app-main">
         <div className="video-section">
           <CameraView
@@ -240,12 +248,6 @@ function App() {
         </div>
 
         <div className="controls-section">
-          <GenreSelector
-            selectedGenre={genre}
-            onSelectGenre={handleGenreSelect}
-            disabled={false}
-          />
-
           {error && <div className="error-banner">{error}</div>}
 
           <div className="action-buttons">
