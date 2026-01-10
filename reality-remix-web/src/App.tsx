@@ -131,6 +131,10 @@ function App() {
     if (isSessionActive && selectedGenre !== genre) {
       wsClientRef.current.sendGenreChange(selectedGenre);
       setGenre(selectedGenre);
+      // Reset frame sending state to allow commentary to continue immediately
+      canSendFrameRef.current = true;
+      lastCommentaryTimeRef.current = 0; // Reset cooldown
+      console.log("🔄 Genre changed - frame sending enabled to continue commentary");
       return;
     }
 
