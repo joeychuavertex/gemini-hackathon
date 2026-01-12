@@ -1,6 +1,6 @@
 # The Reality Remix
 
-Turn everyday life into instant entertainment using Gemini 2.0 Flash Live API. This project consists of a Python FastAPI backend and a React frontend that work together to provide real-time AI-powered commentary on your camera feed.
+Turn everyday life into instant entertainment using Gemini 2.5 Flash Live API with native audio generation. This project consists of a Python FastAPI backend and a React frontend that work together to provide real-time AI-powered commentary on your camera feed, complete with background music and live subtitles.
 
 ## 🚀 Quick Start
 
@@ -12,21 +12,7 @@ Turn everyday life into instant entertainment using Gemini 2.0 Flash Live API. T
 
 ### Running the Application
 
-#### Option 1: Using the Shell Scripts (Recommended)
-
-1. **Start the Backend:**
-   ```bash
-   ./run-backend.sh
-   ```
-   The backend will start on `http://localhost:8000`
-
-2. **Start the Frontend** (in a new terminal):
-   ```bash
-   ./run-frontend.sh
-   ```
-   The frontend will start on `http://localhost:5173`
-
-#### Option 2: Manual Setup
+#### Manual Setup
 
 **Backend Setup:**
 
@@ -83,9 +69,11 @@ Turn everyday life into instant entertainment using Gemini 2.0 Flash Live API. T
 3. Click "Start Camera" and allow camera permissions
 4. Choose a commentary genre from the dropdown
 5. Click "Start Commentary"
-6. Point your camera at anything and enjoy the AI-generated commentary!
+6. Point your camera at anything and enjoy the AI-generated commentary with background music and live subtitles!
 
 ## 🎭 Available Genres
+
+The app features **19 unique commentary styles**:
 
 - 🌿 **Nature Documentary** - David Attenborough style
 - 🏆 **Sports Commentary** - Excited play-by-play
@@ -95,6 +83,25 @@ Turn everyday life into instant entertainment using Gemini 2.0 Flash Live API. T
 - 👨‍🍳 **Cooking Show** - Enthusiastic chef
 - 🔬 **Science Documentary** - Educational exploration
 - 📺 **Reality TV** - Dramatic commentary
+- 🕰️ **Time Traveler Historian** - Historical perspective
+- 🗣️ **Gen-Z Slang Mode** - Short, energetic, playful
+- 📉 **Corporate Consultant** - Dry, analytical commentary
+- 🧑‍🏫 **Overly Serious Academic** - Peer-reviewed style
+- 🎼 **Musical Narrator** - Theatrical, lyrical descriptions
+- 🎌 **Anime Narrator** - Dramatic, over-the-top energy
+- 🎤 **Standup Comedian** - Witty observational comedy
+- 🇸🇬 **Singaporean** - Local style with Singlish expressions
+- 👔 **Sundar Pichai** - Thoughtful tech executive commentary
+- 📱 **TikTok Influencer** - Energetic, trend-focused
+- 👨‍👩‍👧 **Asian Parent** - Caring commentary with typical concerns
+
+## 🎵 Features
+
+- **Real-time AI Commentary** - Powered by Gemini 2.5 Flash with native audio generation
+- **Background Music** - Genre-matched music using Lyria RealTime API
+- **Live Subtitles** - Real-time transcription of commentary displayed on screen
+- **Multiple Genres** - Switch between 19 different commentary styles
+- **Frame Optimization** - Intelligent frame processing for optimal performance
 
 ## 🏗️ Project Structure
 
@@ -105,18 +112,16 @@ gemini-hackathon/
 │   │   ├── main.py           # FastAPI app & WebSocket endpoint
 │   │   ├── core/             # Configuration
 │   │   ├── models/           # Pydantic schemas
-│   │   └── services/         # Business logic
+│   │   └── services/         # Business logic (Gemini, Lyria, frame processing)
 │   ├── requirements.txt
 │   └── README.md
 ├── reality-remix-web/         # React frontend
 │   ├── src/
-│   │   ├── components/       # React components
-│   │   ├── hooks/            # Custom React hooks
+│   │   ├── components/       # React components (Camera, GenreSelector, Subtitles)
+│   │   ├── hooks/            # Custom React hooks (audio, music, frame capture)
 │   │   └── services/         # WebSocket client
 │   ├── package.json
 │   └── README.md
-├── run-backend.sh            # Backend startup script
-├── run-frontend.sh           # Frontend startup script
 └── README.md                 # This file
 ```
 
@@ -124,9 +129,10 @@ gemini-hackathon/
 
 ### Backend Configuration
 
-Edit `reality-remix-backend/.env` to configure:
+Create a `.env` file in the `reality-remix-backend` directory with:
 
 - `GOOGLE_GENERATIVE_AI_API_KEY` - Your Gemini API key (required)
+- `USE_LYRIA_REALTIME` - Use Lyria RealTime for low-latency music (default: True)
 - `HOST` - Server host (default: 0.0.0.0)
 - `PORT` - Server port (default: 8000)
 - `ALLOWED_ORIGINS` - CORS allowed origins (comma-separated)
